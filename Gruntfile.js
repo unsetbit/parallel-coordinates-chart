@@ -8,21 +8,21 @@ module.exports = function(grunt){
 
 		browserify: {
 			dist: { 
-				files: { 'dist/<%= pkg.name %>.js': ['src/js/module.js']	}
+				files: { 'dist/<%= pkg.name %>.js': ['src/js/chart.js']	}
 			},
+
 			dev: {
-				files: { 'dist/<%= pkg.name %>.js': ['src/js/module.js'] },
+				files: { 'dist/<%= pkg.name %>.js': ['src/js/chart.js'] },
 				options: {	
-					bundleOptions: { 
+					bundleOptions: {
 						debug: true,
 						standalone: '<%= pkg.name %>'
-					} 
+					}
 				}
 			},
+
 			options: {
-				bundleOptions: {
-					standalone: '<%= pkg.name %>'	
-				}
+				bundleOptions: { standalone: '<%= pkg.name %>' }
 			}
 		},
 		
@@ -33,20 +33,17 @@ module.exports = function(grunt){
 		watch: {
 			devJS: {
 				files: ['src/js/**'],
-				tasks: ['browserify:dev', 'jshint:dev']
+				tasks: ['browserify:dev', 'copy', 'jshint:dev']
 			},
 			devCSS: {
 				files: ['src/css/**'],
-				tasks: ['compass:dist']
+				tasks: ['compass:dist', 'copy']
 			}
 		},
 
 		compass: {
 			dist: {
-				options: {
-					sassDir: 'src/css',
-					cssDir: 'dist'
-				}
+				options: { sassDir: 'src/css', cssDir: 'dist' }
 			}
 		},
 
@@ -56,19 +53,23 @@ module.exports = function(grunt){
 			}
 		},
 
+		copy: {
+			examples: {
+				files: [
+					{expand: true, src: ['dist/*'], dest: 'example/', filter: 'isFile'}
+				]
+			}
+		},
+
 		jshint: {
 			dev: {
 				options: { force: true },
 				files: { src: ["src/js/**.js"]	}
 			},
 
-			dist: {
-				files: { src: ["src/js/**.js"]	}
-			},
+			dist: {	files: { src: ["src/js/**.js"]	} },
 
-			options: {
-				jshintrc: '.jshintrc'
-			}
+			options: { jshintrc: '.jshintrc' }
 		},
 
 		jasmine: {
@@ -77,6 +78,15 @@ module.exports = function(grunt){
 				options: {
 					specs: 'test/**Spec.js',
 					helpers: 'test/**Helper.js'
+				}
+			}
+		},
+
+		connect: {
+			server: {
+				options: {
+					port: 8000,
+					base: 'example'
 				}
 			}
 		}
@@ -88,8 +98,9 @@ module.exports = function(grunt){
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-jasmine');
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
+	grunt.loadNpmTasks('grunt-contrib-copy');
+	grunt.loadNpmTasks('grunt-contrib-connect');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
-	grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-browserify');
 	
 	grunt.registerTask('dev', [
@@ -98,6 +109,8 @@ module.exports = function(grunt){
 		'browserify:dev',
 		'compass',
 		'jshint:dev',
+		'copy',
+		'connect',
 		'watch'
 	]);
 

@@ -1,5 +1,4 @@
 {
-  // Enforce
   "camelcase": true,
   "newcap": true,
   "undef": true,
@@ -11,11 +10,15 @@
   "unused": true,
 
   // Relax
+  "expr": true,
   "boss": true,
   "eqnull": true,
 
   // Env
-  "browser":true,
+  "browser": true,
+  "node": true,
 
-  "globals": {}
+  "globals": {
+    "d3": true
+  }
 }
