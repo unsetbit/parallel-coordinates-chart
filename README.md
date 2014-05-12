@@ -6,6 +6,8 @@ parallel coordinates charts that look similar to this:
 
 <img src="https://raw.githubusercontent.com/oztu/parallel-coordinates-chart/master/example/screenshot.png"/>
 
+If you use AngularJS, you may find this more handy: [angular-parallel-coordinates](https://github.com/oztu/angular-parallel-coordinates)
+
 ## Example
 ```html
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -24,7 +26,11 @@ d3.csv('data.csv', function(err, data){
 </script>
 ```
 
-## API and Usage
+## Usage
+`bower install parallel-coordinates-chart` and add `parallel-coordinates-chart.js` and `parallel-coordinates-chart.css` to your application. [D3](http://d3js.org/) must be included in the app prior to this tool.
+
+
+## API
 ```javascript
 
 // Create chart draw function
