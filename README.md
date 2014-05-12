@@ -4,7 +4,7 @@
 visualizing multivariate data. This is a tool written using d3 to enable you to create 
 parallel coordinates charts that look similar to this:
 
-<img src="https://github.com/oztu/parallel-coordinates-chart/blob/master/example/screenshot.png"/>
+<img src="https://raw.githubusercontent.com/oztu/parallel-coordinates-chart/master/example/screenshot.png"/>
 
 ## Example
 ```html
