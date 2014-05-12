@@ -6,6 +6,13 @@
     "dist/parallel-coordinates-chart.css",
     "dist/parallel-coordinates-chart.js"
   ],
+  "keywords": [
+    "parallelcoordinates",
+    "visualization",
+    "d3",
+    "multivariate",
+    "dataviz"
+  ],
   "homepage": "https://github.com/oztu/parallel-coordinates-chart",
   "authors": [
     "Ozan Turgut <ozanturgut@gmail.com>"
