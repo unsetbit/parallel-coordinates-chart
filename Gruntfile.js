@@ -27,7 +27,7 @@ module.exports = function(grunt){
 		},
 		
 		uglify: {
-			dist: {	files: { 'dist/<%= pkg.name %>.js': ['dist/<%= pkg.name %>.js']	} }
+			dist: {	files: { 'dist/<%= pkg.name %>.min.js': ['dist/<%= pkg.name %>.js']	} }
 		},
 
 		watch: {
@@ -49,7 +49,7 @@ module.exports = function(grunt){
 
 		cssmin: {
 			dist: {
-				files: { 'dist/<%= pkg.name %>.css' : ['dist/<%= pkg.name %>.css'] }
+				files: { 'dist/<%= pkg.name %>.min.css' : ['dist/<%= pkg.name %>.css'] }
 			}
 		},
 
