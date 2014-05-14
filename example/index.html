@@ -30,6 +30,10 @@
       return d;
     });
 
+
+    document.body.addEventListener('brushend', function(e){
+      console.log(e);
+    })
     d3.select(document.body).datum(data).call(chart.redraw);
   });
 </script>

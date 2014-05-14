@@ -1,4 +1,6 @@
 // Borrows heavily from http://bl.ocks.org/mbostock/7586334
+require('./customEventPolyfill');
+
 
 var interpolator = require('./interpolator'),
   defaultColorGenerator = require('./colorGenerator');
@@ -33,6 +35,8 @@ module.exports = function parallelCoordinatesChart(config){
     // Just in case we're drawing it in multiple places
     selection.each(function(data){
       if(!data) return;
+      var element = this;
+
       var y = {},
         dragging = {};
 
@@ -117,7 +121,12 @@ module.exports = function parallelCoordinatesChart(config){
       g.append('g')
           .attr('class', 'brush')
           .each(function(d) { 
-            d3.select(this).call(y[d].brush = d3.svg.brush().y(y[d]).on('brushstart', brushStartHandler).on('brush', brush)); 
+            d3.select(this).call(
+              y[d].brush = d3.svg.brush().y(y[d])
+                .on('brushstart', brushStartHandler)
+                .on('brush', brush)
+                .on('brushend', brushEndHandler)
+            ); 
           })
         .selectAll('rect')
           .attr('x', -8)
@@ -145,6 +154,36 @@ module.exports = function parallelCoordinatesChart(config){
       }
       
 
+      function setBrush(dimension, extent){
+        svg.selectAll('.brush').filter(function(d){
+          return d === dimension;
+        }).call(y[dimension].brush.extent(extent)).call(brush);
+      }
+
+      window.setBrush = setBrush;
+
+      function brushEndHandler(){
+        var selected = svg.selectAll('.foreground .active').data();
+        var filters = {};
+        dimensions.filter(function(dimension) { return !y[dimension].brush.empty(); })
+          .forEach(function(dimension){
+            var extent = y[dimension].brush.extent();
+            filters[dimension] = {
+              min: extent[0],
+              max: extent[1]
+            }; 
+          });
+
+        var eventDetails = {
+          element: element,
+          selected: selected,
+          filters: filters
+        };
+
+        var event = new CustomEvent('changefilter', {detail: eventDetails});
+        element.dispatchEvent(event);
+      }
+
       // Handles a brush event, toggling the display of foreground lines.
       function brush() {
         var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
@@ -154,6 +193,7 @@ module.exports = function parallelCoordinatesChart(config){
           var visible = actives.every(function(p, i) {
             return extents[i][0] <= d[p] && d[p] <= extents[i][1];
           });
+
           return visible ? 'active' : 'filtered';
         });
       }
