@@ -2,282 +2,337 @@
 require('./customEventPolyfill');
 
 
-var interpolator = require('./interpolator'),
-  defaultColorGenerator = require('./colorGenerator');
+var defaultInterpolator = require('./interpolator'),
+  defaultColorScaleGenerator = require('./defaultColorScaleGenerator');
 
 function defaultDomainGenerator(dimension, data){
   return d3.extent(data, function(d) { return +d[dimension]; });
 }
 
 module.exports = function parallelCoordinatesChart(config){
-  config || (config = {});
 
-  var margin = [30, 10, 10, 10];
-  var width = 1560;
-  var height = 500;
-  var innerWidth = width - margin[1] - margin[3];
-  var innerHeight = height - margin[0] - margin[2];
-  var x = d3.scale.ordinal().rangePoints([0, innerWidth], 1);
-  var selectedProperty = '';
-  var dimensions;
-  var colorGenerator = defaultColorGenerator;
-  var domainGenerator = defaultDomainGenerator;
+  // Configurable variables
+  var margin, 
+    width, 
+    height, 
+    selectedProperty,
+    colorGenerator,
+    domainGenerator,
+    dimensions,
+    interpolator;
 
-  var line = d3.svg.line().interpolate(interpolator);
+  // Generated variables
+  var innerWidth,
+    innerHeight,
+    x,
+    y, 
+    dragging, 
+    element, 
+    data, 
+    svg,
+    line;
+
   var axis = d3.svg.axis().orient('left');
 
-  // When brushing, don’t trigger axis dragging.
-  function brushStartHandler() {
-    d3.event.sourceEvent.stopPropagation();
+  function init(config){
+    if('margin' in config) draw.margin(config.margin);
+    else draw.margin([30, 10, 10, 10]); // default
+
+    if('width' in config) draw.width(config.width);
+    else draw.width(1560); // default
+
+    if('height' in config) draw.height(config.height);
+    else draw.width(500); // default;
+
+    if('domain' in config) draw.domain(config.domain);
+    else draw.domain(defaultDomainGenerator); // default
+
+    if('highlight' in config) draw.highlight(config.highlight);
+    else draw.highlight(''); // default
+
+    if('interpolator' in config) draw.interpolator(config.interpolator);
+    else draw.interpolator(defaultInterpolator); // default
+
+    if('color' in config) draw.color(config.color);
+    else draw.color(defaultColorScaleGenerator); // default
+
+    if('select' in config) draw.select(config.select);
   }
 
-  function chart(selection){
-    // Just in case we're drawing it in multiple places
-    selection.each(function(data){
-      if(!data) return;
-      var element = this;
+  function updateHighlight(svg){
+    if(!svg) return;
 
-      var y = {},
-        dragging = {};
-
-      var svg = d3.select(this)
-        .selectAll('svg')
-          .data([data])
-        .enter()
-          .append('svg')
-            .attr('class', 'parallel-coordinates-chart')
-            .attr('width', innerWidth + margin[1] + margin[3])
-            .attr('height', innerHeight + margin[0] + margin[2])
-            .append('g')
-              .attr('transform', 'translate(' + margin[3] + ',' + margin[0] + ')');
-
-      // Extract the list of dimensions and create a scale for each.
-      if(!dimensions) dimensions = Object.keys(data[0]);
-      x.domain(dimensions);
-      dimensions.forEach(function(d) {
-        y[d] = d3.scale.linear()
-                .range([innerHeight, 0])
-                .domain(domainGenerator(d, data));
+    svg.selectAll('.dimension.selected').classed('selected', false);
+    svg.selectAll('.dimension')
+      .each(function(d){
+        if(d === selectedProperty){
+          d3.select(this).classed('selected', true);
+        }
       });
 
-      // Add grey background lines for context.
-      var background = svg.append('g')
-          .attr('class', 'background')
-        .selectAll('path')
-          .data(data)
-        .enter().append('path')
-          .attr('d', path);
+    var paths = svg.selectAll('g.datalines path');
+    if(!selectedProperty) return paths.style('stroke', '');
+    if(!paths || !paths.length) return;
 
-      // Add blue foreground lines for focus.
-      var foreground = svg.append('g')
-          .attr('class', 'foreground')
-        .selectAll('path')
-          .data(data)
-        .enter().append('path')
-          .attr('d', path);
-
-      // Add a group element for each dimension.
-      var g = svg.selectAll('.dimension')
-          .data(dimensions)
-        .enter().append('g')
-          .attr('class', 'dimension')
-          .attr('transform', function(d) { return 'translate(' + x(d) + ')'; })
-          .on('click', function(d){
-            if (d3.event.defaultPrevented) return; // click suppressed
-            if(d === selectedProperty) setProperty('');
-            else setProperty(d);
-          })
-          .call(d3.behavior.drag()
-            .on('dragstart', function(d) {
-              dragging[d] = this.__origin__ = x(d);
-              background.attr('visibility', 'hidden');
-            })
-            .on('drag', function(d) {
-              dragging[d] = Math.min(innerWidth, Math.max(0, this.__origin__ += d3.event.dx));
-              foreground.attr('d', path);
-              dimensions.sort(function(a, b) { return position(a) - position(b); });
-              x.domain(dimensions);
-              g.attr('transform', function(d) { return 'translate(' + position(d) + ')'; });
-            })
-            .on('dragend', function(d) {
-              delete this.__origin__;
-              delete dragging[d];
-              d3.select(this).attr('transform', 'translate(' + x(d) + ')');
-              foreground.attr('d', path);
-              background.attr('d', path)
-                  .attr('visibility', null);
-            }));
-
-      // Add an axis and title.
-      g.append('g')
-          .attr('class', 'axis')
-          .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
-        .append('text')
-          .attr('text-anchor', 'middle')
-          .attr('y', -9)
-          .text(String);
-
-      // Add and store a brush for each axis.
-      g.append('g')
-          .attr('class', 'brush')
-          .each(function(d) { 
-            d3.select(this).call(
-              y[d].brush = d3.svg.brush().y(y[d])
-                .on('brushstart', brushStartHandler)
-                .on('brush', brush)
-                .on('brushend', brushEndHandler)
-            ); 
-          })
-        .selectAll('rect')
-          .attr('x', -8)
-          .attr('width', 16);
-
-      setProperty(selectedProperty);
-
-      function setProperty(p){
-        selectedProperty = p;
-        
-        svg.selectAll('.dimension.selected').attr('class', 'dimension');
-        svg.selectAll('.dimension')
-          .each(function(d){
-            if(d === selectedProperty){
-              d3.select(this).attr('class', 'dimension selected');      
-            }
-          });
-        if(!p) return foreground.style('stroke', '');
-
-        var color = colorGenerator(p, data);
-        foreground.style('stroke', function(d){ 
-            if(!d[p]) return 'gray';
-            return color(d[p]);   
-          });
-      }
-      
-
-      function setBrush(dimension, extent){
-        svg.selectAll('.brush').filter(function(d){
-          return d === dimension;
-        }).call(y[dimension].brush.extent(extent)).call(brush);
-      }
-
-      window.setBrush = setBrush;
-
-      function brushEndHandler(){
-        var selected = svg.selectAll('.foreground .active').data();
-        var filters = {};
-        dimensions.filter(function(dimension) { return !y[dimension].brush.empty(); })
-          .forEach(function(dimension){
-            var extent = y[dimension].brush.extent();
-            filters[dimension] = {
-              min: extent[0],
-              max: extent[1]
-            }; 
-          });
-
-        var eventDetails = {
-          element: element,
-          selected: selected,
-          filters: filters
-        };
-
-        var event = new CustomEvent('changefilter', {detail: eventDetails});
-        element.dispatchEvent(event);
-      }
-
-      // Handles a brush event, toggling the display of foreground lines.
-      function brush() {
-        var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
-            extents = actives.map(function(p) { return y[p].brush.extent(); });
-        
-        foreground.attr('class', function(d) {
-          var visible = actives.every(function(p, i) {
-            return extents[i][0] <= d[p] && d[p] <= extents[i][1];
-          });
-
-          return visible ? 'active' : 'filtered';
-        });
-      }
-      function position(d) {
-        // if we're currently dragging the axis return the drag position
-        // otherwise return the normal x-axis position
-        var v = dragging[d];
-        return v == null ? x(d) : v;
-      }
-
-      // Returns the path for a given data point.
-      function path(d) {
-        return line(dimensions.map(function(p) { 
-          return [position(p), y[p](d[p])]; 
-        }));
-      }
+    var color = colorGenerator(selectedProperty, svg.data()[0]);
+    paths.style('stroke', function(d){ 
+      return color(d[selectedProperty]);   
     });
   }
 
-  chart.width = function(_){
+
+  function createDraggable(){
+    return d3.behavior.drag()
+      .on('dragstart', function(d) {
+        dragging[d] = this.__origin__ = x(d);
+      })
+      .on('drag', function(d) {
+        dragging[d] = Math.min(innerWidth, Math.max(0, this.__origin__ += d3.event.dx));
+        svg.selectAll('g.datalines path').attr('d', path);
+        dimensions.sort(function(a, b) { return position(a) - position(b); });
+        x.domain(dimensions);
+        svg.selectAll('g.dimension').attr('transform', function(d) { return 'translate(' + position(d) + ')'; });
+      })
+      .on('dragend', function(d) {
+        delete this.__origin__;
+        delete dragging[d];
+        d3.select(this).attr('transform', 'translate(' + x(d) + ')');
+        svg.selectAll('g.datalines path').attr('d', path);
+    });
+  }
+
+  // When brushing, don’t trigger axis dragging.
+  function brushStartHandler() { 
+    d3.event.sourceEvent.stopPropagation(); 
+  }
+
+  // Handles a brush event, toggling the display of foreground lines.
+  function brush() {
+    var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
+        extents = actives.map(function(p) { return y[p].brush.extent(); });
+
+    var selected = [];
+    svg.selectAll('g.datalines path').attr('class', function(d) {
+      var visible = actives.every(function(p, i) {
+        return extents[i][0] <= d[p] && d[p] <= extents[i][1];
+      });
+
+      if(visible){
+        selected.push(d);
+        return 'active';
+      } else {
+        return 'filtered';
+      }
+    });
+
+    var filters = {};
+    actives.forEach(function(dimension, i){
+      filters[dimension] = extents[i];
+    });
+
+    var eventDetails = {
+      element: element,
+      selected: selected,
+      filters: filters
+    };
+
+    var event = new CustomEvent('changefilter', {detail: eventDetails});
+    element.dispatchEvent(event);
+  }
+
+  function position(d) {
+    // if we're currently dragging the axis return the drag position
+    // otherwise return the normal x-axis position
+    var v = dragging[d];
+    return v == null ? x(d) : v;
+  }
+
+  // Returns the path for a given data point.
+  function path(d) {
+    return line(dimensions.map(function(p) { 
+      return [position(p), y[p](d[p])]; 
+    }));
+  }
+
+  function draw(container){
+    dragging = {};
+
+    element = container.node();
+    data = container.datum();
+
+    // Extract the list of dimensions and create a scale for each.
+    if(!dimensions) dimensions = Object.keys(data[0]);
+
+    x.domain(dimensions);
+    
+    y = {};
+    dimensions.forEach(function(d) {
+      y[d] = d3.scale.linear()
+        .range([innerHeight, 0])
+        .domain(domainGenerator(d, data));
+    });
+
+    // base svg
+    svg = container
+      .selectAll('svg')
+        .data([data])
+      .enter()
+        .append('svg')
+          .classed('parallel-coordinates-chart', true)
+          .attr('width', width)
+          .attr('height', height);
+    
+    var body = svg          
+      .append('g')
+        .attr('transform', 'translate(' + margin[3] + ',' + margin[0] + ')');
+
+    // create paths
+    body.append('g')
+      .classed('datalines', true)
+      .selectAll('path')
+      .data(data)
+      .enter()
+        .append('path')
+        .attr('d', path);
+
+    // Add a group element for each dimension.
+    var dimensionGroup = body
+      .selectAll('.dimension')
+        .data(dimensions)
+        .enter()
+          .append('g')
+            .classed('dimension', true)
+            .attr('transform', function(d) { return 'translate(' + x(d) + ')'; })
+            .call(createDraggable());
+    
+    // Add an axis and title.
+    dimensionGroup.append('g')
+        .attr('class', 'axis')
+        .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
+      .append('text')
+        .attr('text-anchor', 'middle')
+        .attr('y', -9)
+        .text(String)
+        .on('click', function(d){
+          if (d3.event.defaultPrevented) return; // click suppressed
+          if(d === selectedProperty) draw.highlight('');
+          else draw.highlight(d);
+        });
+
+    // Add and store a brush for each axis.
+    dimensionGroup.append('g')
+        .attr('class', 'brush')
+        .each(function(d) { 
+          d3.select(this).call(
+            y[d].brush = d3.svg.brush().y(y[d])
+              .on('brushstart', brushStartHandler)
+              .on('brush', brush)
+          ); 
+        })
+      .selectAll('rect')
+        .attr('x', -8)
+        .attr('width', 16);
+
+    draw.highlight(selectedProperty);
+
+    return draw;
+  }
+
+  draw.width = function(_){
     if (!arguments.length) return width;
     width = _;
     innerWidth = width - margin[1] - margin[3];
     x = d3.scale.ordinal().rangePoints([0, innerWidth], 1);
-    return chart;
+    return draw;
   };
 
-  chart.height = function(_){
+  draw.height = function(_){
     if (!arguments.length) return height;
     height = _;
     innerHeight = height - margin[0] - margin[2];
-    return chart;
+    return draw;
   };
 
-  chart.margin = function(_){
+  draw.margin = function(_){
     if (!arguments.length) return margin;
     margin = _;
-    chart.width(width);
-    chart.height(height);
-    return chart;
+    draw.width(width);
+    draw.height(height);
+    return draw;
   };
 
-  chart.select = function(_){
+  draw.select = function(_){
     if (!arguments.length) return dimensions;
     dimensions = _;
-    return chart;
+    return draw;
   };
 
-  chart.domain = function(_){
+  draw.domain = function(_){
     if (!arguments.length) return domainGenerator;
     domainGenerator = _;
-    return chart;
+    return draw;
   };
   
-  chart.color = function(_){
+  draw.color = function(_){
     if (!arguments.length) return colorGenerator;
     colorGenerator = _;
-    return chart;
+    return draw;
   };
 
-  chart.highlight = function(_){
+  draw.interpolator = function(_){
+    if (!arguments.length) return interpolator;
+    interpolator = _;
+    line = d3.svg.line().interpolate(interpolator);
+    return draw;
+  };
+
+  draw.highlight = function(_){
     if (!arguments.length) return selectedProperty;
     selectedProperty = _;
-    return chart;
+    updateHighlight(svg);
+    return draw;
   };
 
-  chart.redraw = function(selection){
-    selection.selectAll('svg').remove();
-    chart(selection);
-    return chart;
+  draw.filter = function(dimension, extent){
+    if(arguments.length === 0){
+      var brushes = {};
+      Object.keys(y).forEach(function(dimension){
+        var extent = y[dimension].brush.extent();
+        
+        // skip unset filters
+        if(extent[0] === extent[1]) return;
+        
+        brushes[dimension] = y[dimension].brush.extent();
+      });
+
+      return brushes;
+    }
+
+    if(arguments.length === 1){
+      extent = y[dimension].brush.extent();
+      if(extent[0] === extent[1]) return; // undefined if unset
+      return extent;
+    }
+
+    if(!extent) extent = [0,0]; // this hides brush
+
+    svg.selectAll(' .brush').filter(function(d){
+      return d === dimension;
+    }).call(y[dimension].brush.extent(extent)).call(brush);    
   };
 
-  chart.draw = function(selection){
-    chart(selection);
-    return chart;
+  draw.redraw = function(container){
+    if(svg) svg.remove();
+    draw(container);
+    return draw;
   };
 
-  if('width' in config) chart.width(config.width);
-  if('height' in config) chart.height(config.height);
-  if('margin' in config) chart.margin(config.margin);
-  if('select' in config) chart.select(config.select);
-  if('domain' in config) chart.domain(config.domain);
-  if('highlight' in config) chart.highlight(config.highlight);
-  if('color' in config) chart.color(config.color);
+  draw.draw = function(container){
+    draw(container);
+    return draw;
+  };
 
-  return chart;
+  init(config || {});
+
+  return draw;
 };

@@ -1,28 +1,27 @@
 .parallel-coordinates-chart {
   font: 10px sans-serif;
 
-  .dimension.selected text {
-    font-weight:bold;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+
+  .dimension.selected {
+    text { font-weight:bold; }
+    .domain { stroke-width:3px; }
   }
 
-  .dimension.selected .domain {
-    stroke-width:2px;
-  }
-
-  .background path {
-    fill: none;
-    stroke: #ccc;
-    stroke-opacity: .3;
-    shape-rendering: crispEdges;
-  }
-
-  .foreground path {
+  .datalines  path {
     fill: none;
     stroke: steelblue;
     stroke-opacity: .3;
+    stroke-width:2px;
 
     &.filtered{
-      display:none;
+      stroke-width:1px;
+      stroke: #ccc!important;
     }
   }
 
@@ -43,4 +42,12 @@
     text-shadow: 0 1px 0 #fff;
     cursor: move;
   }
+}
+
+
+body,html{
+  -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+  -ms-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }

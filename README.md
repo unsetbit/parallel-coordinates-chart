@@ -88,6 +88,19 @@ chart.draw(d3.select(document.body).datum(data));
 chart.redraw(d3.select(document.body));
 // or
 d3.select(document.body).call(chart.redraw);
+
+
+// Programatically access and set filters
+chart.filter('Dim1', [0,25]); // Set the brush filter for Dim1 to cover 0 to 25
+var extent = chart.filter('Dim1'); // Get current brush filter value for Dim1
+
+
+// Listen for filter changes
+document.body.addEventListener('changefilter', function(e){
+	e.element === document.body;
+	e.filters; // current set of filters
+	e.selected; // the current dataset that's selected
+});
 ```
 
 ## Developing
