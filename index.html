@@ -2,7 +2,7 @@
 <head>
   <meta charset="utf-8">
   <title>Parallel Coordinates Chart Example</title>
-  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
   <link type="text/css" rel="stylesheet" href="dist/parallel-coordinates-chart.css" />
   <script src="dist/parallel-coordinates-chart.js"></script>
   <style>
@@ -17,24 +17,46 @@
 <script>
   var chart = parallelCoordinatesChart()
     .width(window.innerWidth)
-    .height(window.innerHeight);
+    .height(window.innerHeight)
+    // The rest are optional
+    .select(['API', 'WH_API', 'HI_API', 'PCT_HI', 'COL_GRAD', 'PCT_WH'])
+    .highlight('COL_GRAD')
+    .domain(function(dimension, data){ 
+      if(~dimension.indexOf('API')){
+        return [200, 1000];
+      } else if(~dimension.indexOf('PCT')) {
+        return [0,100];
+      } else {
+        return d3.extent(data, function(d) { return +d[dimension]; });
+      }
+    });
 
   d3.csv('data.csv', function(err, data){
     data = data.filter(function(d){
       return d.API;
     }).map(function(d){
-      delete d.District;
-      delete d.cds;
-      delete d.CDS;
-      delete d.NCESDist;
+      Object.keys(d).map(function(dimension){
+        if(~dimension.indexOf('API') && d[dimension] < 200){
+          delete d[dimension];
+        }
+      });
+
       return d;
     });
 
-
-    document.body.addEventListener('brushend', function(e){
+    document.body.addEventListener('changefilter', function(e){
       console.log(e);
     })
     d3.select(document.body).datum(data).call(chart.redraw);
+    d3.select(document.body).datum(data).call(chart.redraw);
+
+    setTimeout(function(){
+      d3.select(document.body).datum(data).call(chart.redraw);
+
+      // highlight low performing schools
+      chart.highlight('API');
+      console.log(chart.filter('API', [200, 800])); 
+    },2000);
   });
 </script>
 
