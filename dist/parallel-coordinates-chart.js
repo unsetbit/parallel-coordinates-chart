@@ -290,15 +290,19 @@ module.exports = function parallelCoordinatesChart(config){
 
   draw.highlight = function(_){
     if (!arguments.length) return selectedProperty;
-    selectedProperty = _;
-    updateHighlight(svg);
 
-    if(element){
-      element.dispatchEvent(new CustomEvent('changehighlight', {detail: {
-        element: element,
-        highlight: selectedProperty
-      }}));
+    if(selectedProperty !== _){
+      selectedProperty = _;
+      
+      if(element){
+        element.dispatchEvent(new CustomEvent('changehighlight', {detail: {
+          element: element,
+          highlight: selectedProperty
+        }}));
+      }
     }
+
+    updateHighlight(svg);
 
     return draw;
   };
