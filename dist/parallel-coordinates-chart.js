@@ -335,14 +335,12 @@ module.exports = function parallelCoordinatesChart(config){
   draw.filters = function(newFilters){
     filters = newFilters;
     var current = {};
-    var dimensions = Object.keys(y || []);
+    var dimensions = Object.keys(y || {});
 
     dimensions.forEach(function(dimension){
-      var extent = y[dimension].brush.extent();
-      
       // skip unset filters
-      if(extent[0] === extent[1]) return;
-      
+      if(y[dimension].brush.empty()) return;
+
       current[dimension] = y[dimension].brush.extent();
     });
 
@@ -361,17 +359,15 @@ module.exports = function parallelCoordinatesChart(config){
 
     // Zero out any implicitly excluded dimensions
     dimensions.forEach(function(dimension){
-      if(!(dimension in newFilters)){
-        newFilters[dimension] = [0,0];
+      if(dimension in newFilters){
+        y[dimension].brush.extent(newFilters[dimension]);
+      } else {
+        y[dimension].brush.clear();
       }
     });
 
-    var newKeys = Object.keys(newFilters);
-
-    svg.selectAll(' .brush').filter(function(d){
-      return ~newKeys.indexOf(d);
-    }).each(function(d){
-      d3.select(this).call(y[d].brush.extent(newFilters[d]));
+    svg.selectAll(' .brush').each(function(dimension){
+      d3.select(this).call(y[dimension].brush);
     });
 
     svg.call(brush);
