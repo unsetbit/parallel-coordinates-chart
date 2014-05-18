@@ -106,7 +106,7 @@ module.exports = function parallelCoordinatesChart(config){
     d3.event.sourceEvent.stopPropagation(); 
   }
 
-  // Handles a brush event, toggling the display of foreground lines.
+  // Handles a brush event, toggling the display of lines.
   function brush() {
     var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
         extents = actives.map(function(p) { return y[p].brush.extent(); });
@@ -307,31 +307,69 @@ module.exports = function parallelCoordinatesChart(config){
   };
 
   draw.filter = function(dimension, extent){
-    if(arguments.length === 0){
-      var brushes = {};
-      Object.keys(y).forEach(function(dimension){
-        var extent = y[dimension].brush.extent();
-        
-        // skip unset filters
-        if(extent[0] === extent[1]) return;
-        
-        brushes[dimension] = y[dimension].brush.extent();
-      });
-
-      return brushes;
-    }
+    if(arguments.length === 0) return;
+    var current = y[dimension].brush.extent();
 
     if(arguments.length === 1){
-      extent = y[dimension].brush.extent();
-      if(extent[0] === extent[1]) return; // undefined if unset
-      return extent;
+      if(current[0] === current[1]) return; // undefined if unset
+      return current;
     }
 
     if(!extent) extent = [0,0]; // this hides brush
 
+    if(current[0] === extent[0] && current[1] === extent[1]) return draw;
+
     svg.selectAll(' .brush').filter(function(d){
       return d === dimension;
     }).call(y[dimension].brush.extent(extent)).call(brush);    
+
+    return draw;
+  };
+
+  draw.filters = function(newFilters){
+    var current = {};
+    var dimensions = Object.keys(y);
+
+    dimensions.forEach(function(dimension){
+      var extent = y[dimension].brush.extent();
+      
+      // skip unset filters
+      if(extent[0] === extent[1]) return;
+      
+      current[dimension] = y[dimension].brush.extent();
+    });
+
+    if(!arguments.length) return current;
+
+    var same = dimensions.every(function(dimension){
+      if(dimension in newFilters){
+        if(!(dimension in current)) return false;
+
+        return (current[dimension][0] === newFilters[dimension][0] &&
+                current[dimension][1] === newFilters[dimension][1]);
+      } else return !(dimension in current);
+    });
+
+    if(same) return draw;
+
+    // Zero out any implicitly excluded dimensions
+    dimensions.forEach(function(dimension){
+      if(!(dimension in newFilters)){
+        newFilters[dimension] = [0,0];
+      }
+    });
+
+    var newKeys = Object.keys(newFilters);
+
+    svg.selectAll(' .brush').filter(function(d){
+      return ~newKeys.indexOf(d);
+    }).each(function(d){
+      d3.select(this).call(y[d].brush.extent(newFilters[d]));
+    });
+
+    svg.call(brush);
+
+    return draw;
   };
 
   draw.redraw = function(container){
