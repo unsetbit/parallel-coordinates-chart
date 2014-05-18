@@ -21,6 +21,7 @@
     // The rest are optional
     .select(['API', 'WH_API', 'HI_API', 'PCT_HI', 'COL_GRAD', 'PCT_WH'])
     .highlight('COL_GRAD')
+    .filters({API:[800,1000]})
     .domain(function(dimension, data){ 
       if(~dimension.indexOf('API')){
         return [200, 1000];

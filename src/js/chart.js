@@ -16,6 +16,7 @@ module.exports = function parallelCoordinatesChart(config){
     width, 
     height, 
     selectedProperty,
+    filters,
     colorGenerator,
     domainGenerator,
     dimensions,
@@ -49,6 +50,9 @@ module.exports = function parallelCoordinatesChart(config){
 
     if('highlight' in config) draw.highlight(config.highlight);
     else draw.highlight(''); // default
+
+    if('filters' in config) draw.filters(config.filters);
+    else draw.filters({}); // default
 
     if('interpolator' in config) draw.interpolator(config.interpolator);
     else draw.interpolator(defaultInterpolator); // default
@@ -235,6 +239,7 @@ module.exports = function parallelCoordinatesChart(config){
         .attr('width', 16);
 
     draw.highlight(selectedProperty);
+    draw.filters(filters);
 
     return draw;
   }
@@ -327,8 +332,9 @@ module.exports = function parallelCoordinatesChart(config){
   };
 
   draw.filters = function(newFilters){
+    filters = newFilters;
     var current = {};
-    var dimensions = Object.keys(y);
+    var dimensions = Object.keys(y || []);
 
     dimensions.forEach(function(dimension){
       var extent = y[dimension].brush.extent();
