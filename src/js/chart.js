@@ -42,7 +42,7 @@ module.exports = function parallelCoordinatesChart(config){
     else draw.width(1560); // default
 
     if('height' in config) draw.height(config.height);
-    else draw.width(500); // default;
+    else draw.height(500); // default;
 
     if('domain' in config) draw.domain(config.domain);
     else draw.domain(defaultDomainGenerator); // default
@@ -215,7 +215,8 @@ module.exports = function parallelCoordinatesChart(config){
         .text(String)
         .on('click', function(d){
           if (d3.event.defaultPrevented) return; // click suppressed
-          if(d === selectedProperty) draw.highlight('');
+          
+          if(d === selectedProperty) d = '';
           else draw.highlight(d);
         });
 
@@ -290,6 +291,14 @@ module.exports = function parallelCoordinatesChart(config){
     if (!arguments.length) return selectedProperty;
     selectedProperty = _;
     updateHighlight(svg);
+
+    if(element){
+      element.dispatchEvent(new CustomEvent('changehighlight', {detail: {
+        element: element,
+        highlight: selectedProperty
+      }}));
+    }
+
     return draw;
   };
 

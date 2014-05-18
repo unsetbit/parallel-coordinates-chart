@@ -1,6 +1,6 @@
 {
   "name": "parallel-coordinates-chart",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "Parallel coordinates chart for browsers using D3",
   "main": [
     "dist/parallel-coordinates-chart.css",

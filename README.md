@@ -101,6 +101,12 @@ document.body.addEventListener('changefilter', function(e){
 	e.filters; // current set of filters
 	e.selected; // the current dataset that's selected
 });
+
+// Listen for highlight changes
+document.body.addEventListener('changehighlight', function(e){
+	e.element === document.body;
+	e.highlight; // current dimension that's highlighted (empty string if unset highlighting)
+});
 ```
 
 ## Developing

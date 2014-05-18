@@ -45,8 +45,13 @@
     });
 
     document.body.addEventListener('changefilter', function(e){
-      console.log(e);
-    })
+      console.log('changefilter', e);
+    });
+
+    document.body.addEventListener('changehighlight', function(e){
+      console.log('changehighlight', e);
+    });
+
     d3.select(document.body).datum(data).call(chart.redraw);
     d3.select(document.body).datum(data).call(chart.redraw);
 
@@ -58,6 +63,8 @@
       console.log(chart.filter('API', [200, 800])); 
     },2000);
   });
+
+
 </script>
 
 </body>
