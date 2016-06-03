@@ -26,7 +26,7 @@
 /* line 22, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .datalines path.filtered {
   stroke-width: 1px;
-  stroke: #cccccc !important;
+  stroke: #ccc !important;
 }
 /* line 28, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .brush .extent {
@@ -34,7 +34,7 @@
   stroke: #fff;
   shape-rendering: crispEdges;
 }
-/* line 35, ../src/css/parallel-coordinates-chart.scss */
+/* line 34, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .axis line,
 .parallel-coordinates-chart .axis path {
   fill: none;
@@ -45,12 +45,4 @@
 .parallel-coordinates-chart .axis text {
   text-shadow: 0 1px 0 #fff;
   cursor: move;
-}
-
-/* line 48, ../src/css/parallel-coordinates-chart.scss */
-body, html {
-  -webkit-transform: translate3d(0, 0, 0);
-  -moz-transform: translate3d(0, 0, 0);
-  -ms-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
 }
