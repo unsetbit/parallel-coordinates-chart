@@ -41,6 +41,7 @@ module.exports = function parallelCoordinatesChart(config){
     dataLines,
     mutedDataLines,
     highlightedDataLines,
+    dimensionDragging,
     line;
 
   var axis = d3.svg.axis().orient('left');
@@ -99,6 +100,10 @@ module.exports = function parallelCoordinatesChart(config){
   }
 
   function createDraggable(){
+    if (!dimensionDragging) {
+      return function() {}; // noop
+    }
+
     return d3.behavior.drag()
       .on('dragstart', function(d) {
         dragging[d] = this.__origin__ = x(d);
@@ -306,6 +311,9 @@ module.exports = function parallelCoordinatesChart(config){
     width = _;
     innerWidth = width - margin[1] - margin[3];
     x = d3.scale.ordinal().rangePoints([0, innerWidth], 0.8);
+
+    if (dimensions) x.domain(dimensions);
+
     return draw;
   };
 
@@ -413,6 +421,14 @@ module.exports = function parallelCoordinatesChart(config){
     if (!arguments.length) return highlightFilter;
 
     highlightFilter = _;
+
+    return draw;
+  };
+
+  draw.dimensionDragging = function(_) {
+    if (!arguments.length) return dimensionDragging;
+
+    dimensionDragging = _;
 
     return draw;
   };
