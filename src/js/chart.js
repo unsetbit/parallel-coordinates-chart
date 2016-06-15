@@ -5,6 +5,7 @@ require('./customEventPolyfill');
 var defaultInterpolator = require('./interpolator'),
   defaultColorScaleGenerator = require('./defaultColorScaleGenerator');
 
+// returns the numerical extents of the dimension values across the data set
 function defaultDomainGenerator(dimension, data){
   return d3.extent(data, function(d) { return +d[dimension]; });
 }
@@ -18,6 +19,7 @@ module.exports = function parallelCoordinatesChart(config){
     selectedProperty,
     highlighted,
     highlightFilter,
+    muteFilter,
     filters,
     colorGenerator,
     domainGenerator,
@@ -37,6 +39,8 @@ module.exports = function parallelCoordinatesChart(config){
     svg,
     body,
     dataLines,
+    mutedDataLines,
+    highlightedDataLines,
     line;
 
   var axis = d3.svg.axis().orient('left');
@@ -66,7 +70,7 @@ module.exports = function parallelCoordinatesChart(config){
     if('color' in config) draw.color(config.color);
     else draw.color(defaultColorScaleGenerator); // default
 
-    if('select' in config) draw.select(config.select);
+    if('dimensions' in config) draw.dimensions(config.dimensions);
 
     if('onFiltersChange' in config) {
       draw.onFiltersChange(config.onFiltersChange);
@@ -94,7 +98,6 @@ module.exports = function parallelCoordinatesChart(config){
     });
   }
 
-
   function createDraggable(){
     return d3.behavior.drag()
       .on('dragstart', function(d) {
@@ -120,26 +123,18 @@ module.exports = function parallelCoordinatesChart(config){
     d3.event.sourceEvent.stopPropagation();
   }
 
-  // Handles a brush event, toggling the display of lines.
-  function brush() {
+  function brushEndHandler() {
     var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
         extents = actives.map(function(p) { return y[p].brush.extent(); });
 
-    var selected = [];
-    dataLines.selectAll('path').classed('active', function(d) {
-      var visible = actives.every(function(p, i) {
+    function isVisible(d) {
+      return actives.every(function(p, i) {
         return extents[i][0] <= d[p] && d[p] <= extents[i][1];
       });
+    }
 
-      if (visible) selected.push(d);
-      return visible;
-    });
-    dataLines.selectAll('path').classed('filtered', function(d) {
-      var visible = actives.every(function(p, i) {
-        return extents[i][0] <= d[p] && d[p] <= extents[i][1];
-      });
-      return !visible;
-    });
+    var selected = data.filter(isVisible);
+    redrawPathGroups();
 
     var filters = {};
     actives.forEach(function(dimension, i){
@@ -147,6 +142,10 @@ module.exports = function parallelCoordinatesChart(config){
     });
 
     onFiltersChange(filters, selected);
+  }
+
+  // Handles a brush event, toggling the display of lines.
+  function brush() {
   }
 
   function position(d) {
@@ -163,50 +162,94 @@ module.exports = function parallelCoordinatesChart(config){
     }));
   }
 
-  function draw(){
-    dragging = {};
+  function redrawPathGroups() {
+    var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
+        extents = actives.map(function(p) { return y[p].brush.extent(); });
 
-    // Extract the list of dimensions and create a scale for each.
-    if(!dimensions) dimensions = Object.keys(data[0]);
+    function isVisible(d) {
+      return actives.every(function(p, i) {
+        return extents[i][0] <= d[p] && d[p] <= extents[i][1];
+      });
+    }
 
-    x.domain(dimensions);
+    var highlighted = [],
+      muted = [],
+      normal = [];
 
-    y = {};
-    dimensions.forEach(function(d) {
-      y[d] = d3.scale.linear()
-        .range([innerHeight, 0])
-        .domain(domainGenerator(d, data));
-
-      y[d].brush = d3.svg.brush().y(y[d])
-          .on('brushstart', brushStartHandler)
-          .on('brush', brush);
+    data.forEach(function(d) {
+      if (highlightFilter && highlightFilter(d)) {
+        highlighted.push(d);
+      } else if (muteFilter && muteFilter(d) || !isVisible(d)) {
+        muted.push(d);
+      } else {
+        normal.push(d);
+      }
     });
 
+    function getId(d) {
+      return d.id;
+    }
+
+    // create new paths based off the id property for each datum
+    var mutedPaths = mutedDataLines.selectAll('path')
+      .data(muted, getId);
+    mutedPaths.enter().append('path');
+    mutedPaths.exit().remove();
+
+    var normalPaths = dataLines.selectAll('path')
+      .data(normal, getId);
+    normalPaths.enter().append('path');
+    normalPaths.exit().remove();
+
+    var highlightedPaths = highlightedDataLines.selectAll('path')
+      .data(highlighted, getId);
+    highlightedPaths.enter().append('path');
+    highlightedPaths.exit().remove();
+/*
+    highlightedPaths.enter().transition()
+      .duration(100)
+      .delay(function (d, i){ return 10 * i;}).selectAll('path').attr('d', path);
+*/
+
+    // Redraw each path and assign a highlighted state given the highlightFilter
+    // and a muted state given the muteFilter
+    normalPaths.attr('d', path);
+    mutedPaths.attr('d', path);
+    highlightedPaths.attr('d', path);
+
+    var paths = svg.selectAll('g.datalines path').attr('d', path);
+    if(!paths || !paths.length) return;
+
+    if(!selectedProperty) {
+      paths.style('stroke', '');
+    } else {
+      var color = colorGenerator(selectedProperty, data);
+      highlightedPaths.style('stroke', '');
+      normalPaths.style('stroke', function(d){
+        return color(d[selectedProperty]);
+      });
+      mutedPaths.style('stroke', function(d){
+        return color(d[selectedProperty]);
+      });
+    }
+  }
+
+  function draw(){
     svg.attr('width', width)
       .attr('height', height);
 
     // base svg
     body.attr('transform', 'translate(' + margin[3] + ',' + margin[0] + ')');
 
-    // create paths
-    dataLines.selectAll('path')
-      .data(data, function(d) { return d.id; })
-      .enter()
-        .append('path');
+    dragging = {};
 
-    dataLines.selectAll('path')
-      .attr('d', path)
-      .classed('highlighted', function(d) {
-        if (highlighted && highlighted.id === d.id) {
-          return true;
-        }
+    // create a scale and a brush for each dimension being visualized
+    dimensions.forEach(function(d) {
+      y[d].range([innerHeight, 0])
+        .domain(domainGenerator(d, data));
+    });
 
-        if (highlightFilter) {
-          return highlightFilter(d);
-        }
-
-        return false;
-      });
+    redrawPathGroups();
 
     // Add a group element for each dimension.
     var dimensionGroup = body
@@ -281,9 +324,30 @@ module.exports = function parallelCoordinatesChart(config){
     return draw;
   };
 
-  draw.select = function(_){
+  draw.dimensions = function(_){
     if (!arguments.length) return dimensions;
     dimensions = _;
+
+    // If no dimensions are defined, use the properties of the first datum as
+    // the list of dimensions to visualize. This assumes homogeneity in the
+    // dimensionality of the data.
+    if(!dimensions) dimensions = Object.keys(data[0]);
+
+    // The 'x' axis represents the various dimensions which will be visualized
+    // where each 'tick' in the x-axis is really another y-axis.
+    x.domain(dimensions);
+
+    y = {};
+    // create a scale and a brush for each dimension being visualized
+    dimensions.forEach(function(d) {
+      y[d] = d3.scale.linear();
+
+      y[d].brush = d3.svg.brush().y(y[d])
+          .on('brushstart', brushStartHandler)
+          .on('brush', brush)
+          .on('brushend', brushEndHandler);
+    });
+
     return draw;
   };
 
@@ -337,18 +401,24 @@ module.exports = function parallelCoordinatesChart(config){
     return draw;
   };
 
+  draw.muteFilter = function(_) {
+    if (!arguments.length) return muteFilter;
+
+    muteFilter = _;
+
+    return draw;
+  };
+
   draw.highlightFilter = function(_) {
     if (!arguments.length) return highlightFilter;
 
-    if (highlightFilter !== _) {
-      highlightFilter = _;
-    }
+    highlightFilter = _;
 
     return draw;
   };
 
   draw.filter = function(dimension, extent){
-    if(arguments.length === 0) return;
+    if(!arguments.length) return;
     var current = y[dimension].brush.extent();
 
     if(arguments.length === 1){
@@ -408,6 +478,8 @@ module.exports = function parallelCoordinatesChart(config){
 
     svg.call(brush);
 
+    redrawPathGroups();
+
     return draw;
   };
 
@@ -422,7 +494,9 @@ module.exports = function parallelCoordinatesChart(config){
       .attr('class', 'body')
       .attr('transform', 'translate(0,0)');
 
+    mutedDataLines = body.append('g').classed('muted datalines', true);
     dataLines = body.append('g').classed('datalines', true);
+    highlightedDataLines = body.append('g').classed('highlighted datalines', true);
 
     return draw;
   };

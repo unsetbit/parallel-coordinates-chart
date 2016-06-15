@@ -20,28 +20,33 @@
 .parallel-coordinates-chart .datalines path {
   fill: none;
   stroke: steelblue;
-  stroke-opacity: .3;
+  stroke-opacity: 0.5;
   stroke-width: 2px;
 }
-/* line 22, ../src/css/parallel-coordinates-chart.scss */
-.parallel-coordinates-chart .datalines path.filtered {
+/* line 23, ../src/css/parallel-coordinates-chart.scss */
+.parallel-coordinates-chart .datalines.muted path {
+  stroke-opacity: 0.1;
   stroke-width: 1px;
-  stroke: #ccc !important;
 }
 /* line 28, ../src/css/parallel-coordinates-chart.scss */
+.parallel-coordinates-chart .datalines.highlighted path {
+  stroke-opacity: 1;
+  stroke: steelblue !important;
+}
+/* line 33, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .brush .extent {
   fill-opacity: .3;
   stroke: #fff;
   shape-rendering: crispEdges;
 }
-/* line 34, ../src/css/parallel-coordinates-chart.scss */
+/* line 39, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .axis line,
 .parallel-coordinates-chart .axis path {
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
 }
-/* line 41, ../src/css/parallel-coordinates-chart.scss */
+/* line 46, ../src/css/parallel-coordinates-chart.scss */
 .parallel-coordinates-chart .axis text {
   text-shadow: 0 1px 0 #fff;
   cursor: move;

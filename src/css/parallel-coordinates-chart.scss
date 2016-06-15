@@ -16,13 +16,18 @@
   .datalines  path {
     fill: none;
     stroke: steelblue;
-    stroke-opacity: .3;
+    stroke-opacity: 0.5;
     stroke-width:2px;
+  }
 
-    &.filtered{
-      stroke-width:1px;
-      stroke: #ccc!important;
-    }
+  .datalines.muted path {
+    stroke-opacity: 0.1;
+    stroke-width:1px;
+  }
+
+  .datalines.highlighted path {
+    stroke-opacity: 1;
+    stroke: steelblue!important;
   }
 
   .brush .extent {
